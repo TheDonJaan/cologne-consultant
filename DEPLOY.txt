@@ -1,0 +1,13 @@
+COLOGNE CONSULTANT v3.1 — QOL/UI PROTOTYPE
+
+This is a static web app. No build step, framework, database, or backend is required.
+
+For Netlify Drop / manual deployment:
+1. Deploy this folder as-is.
+2. index.html must remain at the site root.
+3. Keep the assets folder beside index.html.
+4. manifest.webmanifest and service-worker.js must remain at the site root.
+
+After deployment, open the HTTPS site in Safari on iPhone and use Share > Add to Home Screen.
+
+Asset correction: bottle_14.webp = Mercedes-Benz Club Black EDT (corrected 2026-10-28).
