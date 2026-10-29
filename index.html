@@ -159,5 +159,5 @@ $('#clearFilters').onclick=()=>{const keep={required:S.required,excluded:S.exclu
 $('#logicAll').onclick=()=>{S.logic='all';renderAll()};$('#logicAny').onclick=()=>{S.logic='any';renderAll()};$('#bottleSearch').oninput=e=>{bottleQuery=e.target.value;renderWardrobe()};$('#wardrobeGrid').onclick=e=>{const u=e.target.closest('[data-use]'),a=e.target.closest('[data-avoid]');if(u)toggleBottle(u.dataset.use,'use');if(a)toggleBottle(a.dataset.avoid,'avoid')};
 $('#formulaBack').onclick=e=>{if(e.target===$('#formulaBack'))$('#formulaBack').classList.remove('open')};
 renderAll();
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(()=>{}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=4',{scope:'./',updateViaCache:'none'}).catch(()=>{}));
 </script></body></html>
