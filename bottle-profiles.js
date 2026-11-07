@@ -762,6 +762,17 @@ function noteArtIndex(note) {
   const index = noteArt.indexOf(noteAliases[note] || note);
   return index < 0 ? noteArt.indexOf('Generic') : index;
 }
+const accordColors = {
+  Fruity:'#99476a', Mossy:'#526c32', Woody:'#886041', Earthy:'#785a48',
+  Citrus:'#8e7227', 'Fresh Spicy':'#596f36', Aromatic:'#38745d', Sweet:'#9d526e',
+  Mineral:'#536e80', Amber:'#9b582f', Powdery:'#795d88', Musky:'#766378',
+  Balsamic:'#78533c', Lavender:'#73549e', 'Warm Spicy':'#a34d37', Ozonic:'#3a7187',
+  Aquatic:'#327b87', 'White Floral':'#7f7856', Vanilla:'#8b7044', Cinnamon:'#914e39',
+  Metallic:'#5b697a', Rose:'#a14063', Oud:'#79504f', 'Soft Spicy':'#896249',
+  Floral:'#935587', Patchouli:'#65693b', Green:'#40784a', Coconut:'#82704d',
+  Marine:'#346c90', Salty:'#5a778a', Fresh:'#397b68', Iris:'#65558e',
+  Caramel:'#986034', Tuberose:'#827554', Coffee:'#785345'
+};
 function openBottleProfile(number, trigger) {
   const b = bottle(number);
   const profile = bottleProfiles[number - 1];
@@ -777,7 +788,7 @@ function openBottleProfile(number, trigger) {
     return `<section class="profile-section"><h3>${headings[group]}</h3><ul class="note-profile-grid">${tiles}</ul></section>`;
   }).join('');
   const accords = profile.accords.map((accord, rank) =>
-    `<li style="--rank-width:${100-rank*8}%">${esc(accord)}</li>`).join('');
+    `<li style="--rank-width:${100-rank*8}%;--accord-color:${accordColors[accord] || '#665d47'}">${esc(accord)}</li>`).join('');
   panel.innerHTML = `<header class="profile-head"><img src="${esc(b.image)}" alt=""><div><p>${esc(profile.brand)}</p><h2 id="profileName">${esc(b.display)}</h2><p>${esc(b.flanker)} · ${esc(b.lifecycle)}</p></div><button class="iconbtn" id="closeBottleProfile" aria-label="Close bottle profile">×</button></header>
     <section class="profile-section"><h3>Accord profile</h3><ol class="accord-list">${accords}</ol><p class="profile-source">Bars show relative order from the verified wardrobe guide.</p></section>${noteSections}`;
   const close = () => {
