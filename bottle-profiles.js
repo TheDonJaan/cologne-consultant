@@ -789,8 +789,8 @@ function openBottleProfile(number, trigger) {
   }).join('');
   const accords = profile.accords.map((accord, rank) =>
     `<li style="--rank-width:${100-rank*8}%;--accord-color:${accordColors[accord] || '#665d47'}">${esc(accord)}</li>`).join('');
-  panel.innerHTML = `<header class="profile-head"><img src="${esc(b.image)}" alt=""><div><p>${esc(profile.brand)}</p><h2 id="profileName">${esc(b.display)}</h2><p>${esc(b.flanker)} · ${esc(b.lifecycle)}</p></div><button class="iconbtn" id="closeBottleProfile" aria-label="Close bottle profile">×</button></header>
-    <section class="profile-section"><h3>Accord profile</h3><ol class="accord-list">${accords}</ol><p class="profile-source">Bars show relative order from the verified wardrobe guide.</p></section>${noteSections}`;
+  panel.innerHTML = `<header class="profile-head"><img src="${esc(bottleImage(b))}" alt=""><div><p>${esc(profile.brand)}</p><h2 id="profileName">${esc(b.display)}</h2><p>${esc(b.flanker)} · ${esc(b.lifecycle)}</p></div><button class="iconbtn" id="closeBottleProfile" aria-label="Close bottle profile">×</button></header>
+    <section class="profile-section"><h3>Accord profile</h3><ol class="accord-list">${accords}</ol><p class="profile-source">Bars show relative order from the verified wardrobe guide.</p></section>${accordSpiderMap([number])}${noteSections}`;
   const close = () => {
     back.classList.remove('open');
     document.removeEventListener('keydown', onKey);
@@ -804,4 +804,48 @@ function openBottleProfile(number, trigger) {
   back.classList.add('open');
   panel.scrollTop = 0;
   $('#closeBottleProfile').focus();
+}
+
+// Shared axes make bottle and combo charts comparable. The five listed accord
+// ranks are display weights only, with no adjustment for dose or performance.
+const accordAxes = [
+  ['Fresh', ['Citrus','Fresh','Aquatic','Ozonic','Marine','Salty','Mineral']],
+  ['Green', ['Green','Aromatic','Mossy','Patchouli','Earthy']],
+  ['Floral', ['Floral','White Floral','Rose','Lavender','Iris','Tuberose']],
+  ['Fruit', ['Fruity','Coconut']],
+  ['Sweet', ['Sweet','Vanilla','Caramel','Coffee']],
+  ['Amber', ['Amber','Balsamic','Musky','Powdery']],
+  ['Woods', ['Woody','Oud','Metallic']],
+  ['Spice', ['Warm Spicy','Fresh Spicy','Soft Spicy','Cinnamon']]
+];
+const bottleAccordValues = bottleProfiles.map(profile => accordAxes.map(([, names]) => {
+  const rank = profile.accords.findIndex(accord => names.includes(accord));
+  return rank < 0 ? 0 : (5 - rank) / 5;
+}));
+function accordSpiderMap(numbers) {
+  const profiles = numbers.map(n => bottleAccordValues[n-1]).filter(Boolean);
+  if (!profiles.length) return '';
+  const values = accordAxes.map((_, i) => profiles.reduce((sum, p) => sum + p[i], 0) / profiles.length);
+  const point = (i, radius) => {
+    const angle = i * Math.PI / 4 - Math.PI / 2;
+    return [140 + Math.cos(angle) * radius, 87 + Math.sin(angle) * radius];
+  };
+  const polygon = radii => radii.map((radius, i) => point(i, radius).map(n => n.toFixed(1)).join(',')).join(' ');
+  const grid = [15,30,45,60].map(radius => `<polygon points="${polygon(accordAxes.map(() => radius))}"/>`).join('');
+  const spokes = accordAxes.map((_, i) => {
+    const [x,y] = point(i,60);
+    return `<path d="M140 87L${x.toFixed(1)} ${y.toFixed(1)}"/>`;
+  }).join('');
+  const labels = accordAxes.map(([name], i) => {
+    const [x,y] = point(i,75);
+    const anchor = x < 139 ? 'end' : x > 141 ? 'start' : 'middle';
+    return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="${anchor}" dominant-baseline="middle">${name}</text>`;
+  }).join('');
+  const description = values.map((v,i) => `${accordAxes[i][0]} ${Math.round(v*100)}`).join(', ');
+  const combo = profiles.length > 1;
+  return `<figure class="accord-spider"><figcaption>${combo?'Combo':'Bottle'} spider map</figcaption>
+    <svg viewBox="0 0 280 175" role="img" aria-label="Relative accord profile, ${description}">
+      <g class="spider-grid">${grid}${spokes}</g>
+      <polygon class="spider-shape" points="${polygon(values.map(v=>v*60))}"/>${labels}
+    </svg><small>${combo?'Average of the bottles’ ranked accords.':'Based on the bottle’s ranked accords.'}</small></figure>`;
 }
