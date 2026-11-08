@@ -806,8 +806,7 @@ function openBottleProfile(number, trigger) {
   $('#closeBottleProfile').focus();
 }
 
-// Shared axes make bottle and combo charts comparable. The five listed accord
-// ranks are display weights only, with no adjustment for dose or performance.
+// Bottle charts use the published accord order as a relative display weight.
 const accordAxes = [
   ['Fresh', ['Citrus','Fresh','Aquatic','Ozonic','Marine','Salty','Mineral']],
   ['Green', ['Green','Aromatic','Mossy','Patchouli','Earthy']],
@@ -822,30 +821,58 @@ const bottleAccordValues = bottleProfiles.map(profile => accordAxes.map(([, name
   const rank = profile.accords.findIndex(accord => names.includes(accord));
   return rank < 0 ? 0 : (5 - rank) / 5;
 }));
-function accordSpiderMap(numbers) {
-  const profiles = numbers.map(n => bottleAccordValues[n-1]).filter(Boolean);
-  if (!profiles.length) return '';
-  const values = accordAxes.map((_, i) => profiles.reduce((sum, p) => sum + p[i], 0) / profiles.length);
+// Match the written scent phases, not the bottle ingredients or spray counts.
+const comboScentAxes = [
+  ['Fresh', /\b(citrus|bergamot|lemon|grapefruit|citron|orange|mandarin|neroli|aquatic|marine|mineral|ozonic|fresh(?:ness)?)\b/i],
+  ['Green', /\b(green|herbal|aromatic|mossy|oakmoss|moss|vetiver|patchouli|earthy|leafy|leaf|grass|tomato)\b/i],
+  ['Floral', /\b(florals?|rose|rosy|jasmine|iris|orris|violet|lavender|tuberose|geranium|blossom|ylang)\b/i],
+  ['Fruit', /\b(fruit(?:y|s)?|pineapple|pear|apple|fig|berries|berry|currant|coconut|peach|plum|dates)\b/i],
+  ['Sweet', /\b(sweet(?:ness)?|vanilla|caramel|toffee|praline|gourmand|tonka|syrup|chocolate|cocoa)\b/i],
+  ['Amber', /\b(amber(?:ed|gris|y|wood)?|ambroxan|resin(?:ous)?|balsamic|labdanum|benzoin|myrrh)\b/i],
+  ['Woods', /\b(wood(?:s|y|land)?|oud|cedar(?:wood)?|sandalwood|guaiac|timber)\b/i],
+  ['Spice', /\b(spic(?:e|es|y|ed)|pepper(?:y|corn)?|cardamom|cinnamon|nutmeg|saffron|clove|ginger|anise)\b/i],
+  ['Tea', /\b(tea|oolong|matcha)\b/i],
+  ['Musk', /\b(musk(?:y|s)?|cashmeran|sylkolide)\b/i]
+];
+function comboScentValues(formula) {
+  const phases = [formula.opening, formula.heart, formula.drydown]
+    .filter(phase => typeof phase === 'string' && phase.trim() && !/^(none|n\/a|—)$/i.test(phase.trim()));
+  const counts = comboScentAxes.map(([, pattern]) => phases.filter(phase => pattern.test(phase)).length);
+  return {counts, phaseCount: phases.length};
+}
+function accordSpiderMap(numbers, formula) {
+  const profile = formula ? null : bottleAccordValues[numbers[0]-1];
+  if (!formula && !profile) return '';
+  const axes = formula ? comboScentAxes : accordAxes;
+  const {counts, phaseCount} = formula ? comboScentValues(formula) : {counts:[],phaseCount:0};
+  const values = formula ? counts.map(count => phaseCount ? count / phaseCount : 0) : profile;
   const point = (i, radius) => {
-    const angle = i * Math.PI / 4 - Math.PI / 2;
+    const angle = i * 2 * Math.PI / axes.length - Math.PI / 2;
     return [140 + Math.cos(angle) * radius, 87 + Math.sin(angle) * radius];
   };
   const polygon = radii => radii.map((radius, i) => point(i, radius).map(n => n.toFixed(1)).join(',')).join(' ');
-  const grid = [15,30,45,60].map(radius => `<polygon points="${polygon(accordAxes.map(() => radius))}"/>`).join('');
-  const spokes = accordAxes.map((_, i) => {
+  const levels = formula && phaseCount ? Array.from({length:phaseCount},(_,i)=>60*(i+1)/phaseCount) : [15,30,45,60];
+  const grid = levels.map(radius => `<polygon points="${polygon(axes.map(() => radius))}"/>`).join('');
+  const spokes = axes.map((_, i) => {
     const [x,y] = point(i,60);
     return `<path d="M140 87L${x.toFixed(1)} ${y.toFixed(1)}"/>`;
   }).join('');
-  const labels = accordAxes.map(([name], i) => {
+  const labels = axes.map(([name], i) => {
     const [x,y] = point(i,75);
     const anchor = x < 139 ? 'end' : x > 141 ? 'start' : 'middle';
     return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="${anchor}" dominant-baseline="middle">${name}</text>`;
   }).join('');
-  const description = values.map((v,i) => `${accordAxes[i][0]} ${Math.round(v*100)}`).join(', ');
-  const combo = profiles.length > 1;
-  return `<figure class="accord-spider"><figcaption>${combo?'Combo':'Bottle'} spider map</figcaption>
-    <svg viewBox="0 0 280 175" role="img" aria-label="Relative accord profile, ${description}">
+  const description = values.map((v,i) => formula
+    ? `${axes[i][0]} in ${counts[i]} of ${phaseCount} phases`
+    : `${axes[i][0]} ${Math.round(v*100)}`).join(', ');
+  const dots = values.map((v,i) => {
+    if (!v) return '';
+    const [x,y] = point(i,v*60);
+    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.4" fill="#e6bb69"/>`;
+  }).join('');
+  return `<figure class="accord-spider"><figcaption>${formula?'Combo':'Bottle'} spider map</figcaption>
+    <svg viewBox="0 0 280 175" role="img" aria-label="${description}">
       <g class="spider-grid">${grid}${spokes}</g>
-      <polygon class="spider-shape" points="${polygon(values.map(v=>v*60))}"/>${labels}
-    </svg><small>${combo?'Average of the bottles’ ranked accords.':'Based on the bottle’s ranked accords.'}</small></figure>`;
+      <polygon class="spider-shape" points="${polygon(values.map(v=>v*60))}"/>${dots}${labels}
+    </svg><small>${formula?'Distance shows how many phases mention each scent family: opening, heart, and drydown.':'Based on the bottle’s ranked accords.'}</small></figure>`;
 }
